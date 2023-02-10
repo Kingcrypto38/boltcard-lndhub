@@ -535,6 +535,33 @@ router.get('/getchaninfo/:chanid', async function (req, res) {
   res.send('');
 });
 
+router.get('/getcardkeys', async function (req, res) {
+  logger.log('/getcardkeys', [req.id]);
+  
+  let u = new User(redis, bitcoinclient, lightning);
+  if (!(await u.loadByAuthorization(req.headers.authorization))) {
+    return errorBadAuth(res);
+  }
+  logger.log('/getcardkeys', [req.id, 'userid: ' + u.getUserId()]);
+
+  //talk to the boltcard service and create a new card. get the keys.
+
+  //store the card UID in Redis.
+
+  res.send({
+    "card_name": "Test_card_keys",
+    "id": 1,
+    "k0": "11111111111111111111111111111111",
+    "k1": "22222222222222222222222222222222",
+    "k2": "33333333333333333333333333333333",
+    "k3": "44444444444444444444444444444444",
+    "k4": "55555555555555555555555555555555",
+    "lnurlw_base": "lnurlw://your.domain.com/ln",
+    "protocol_name": "new_bolt_card_response",
+    "protocol_version": 1
+  });
+});
+
 module.exports = router;
 
 // ################# HELPERS ###########################
