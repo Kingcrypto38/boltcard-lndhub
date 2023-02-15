@@ -548,7 +548,7 @@ router.get('/getcardkeys', async function (req, res) {
 
   //store the card UID in Redis.
 
-  res.send({
+  return res.send({
     "card_name": "Test_card_keys",
     "id": 1,
     "k0": "11111111111111111111111111111111",
@@ -560,7 +560,50 @@ router.get('/getcardkeys', async function (req, res) {
     "protocol_name": "new_bolt_card_response",
     "protocol_version": 1
   });
+
+
 });
+
+router.get('/wipecard', async function (req, res) {
+  logger.log('/wipecard', [req.id]);
+  
+  let u = new User(redis, bitcoinclient, lightning);
+  if (!(await u.loadByAuthorization(req.headers.authorization))) {
+    return errorBadAuth(res);
+  }
+  logger.log('/wipecard', [req.id, 'userid: ' + u.getUserId()]);
+
+  //talk to the boltcard service and wipe a card. get the keys.
+  //find the card using UID in Redis.
+
+  return res.send({
+    "action": "wipe",
+    "id": 1,
+    "k0": "11111111111111111111111111111111",
+    "k1": "22222222222222222222222222222222",
+    "k2": "33333333333333333333333333333333",
+    "k3": "44444444444444444444444444444444",
+    "k4": "55555555555555555555555555555555",
+    "version": 1
+  });
+})
+
+router.get('/getcard', async function (req, res) {
+  logger.log('/getcard', [req.id]);
+  
+  let u = new User(redis, bitcoinclient, lightning);
+  if (!(await u.loadByAuthorization(req.headers.authorization))) {
+    return errorBadAuth(res);
+  }
+  logger.log('/getcard', [req.id, 'userid: ' + u.getUserId()]);
+
+  //find the card using UID in Redis.
+
+  return res.send({
+    "card_name": "Test_card",
+    //rest of the info
+  });
+})
 
 module.exports = router;
 
