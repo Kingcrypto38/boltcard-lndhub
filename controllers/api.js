@@ -562,6 +562,22 @@ router.get('/getcardkeys', async function (req, res) {
   });
 });
 
+router.post('/setdisablecard', async function (req, res) {
+  
+  let u = new User(redis, bitcoinclient, lightning);
+  if (!(await u.loadByAuthorization(req.headers.authorization))) {
+    return errorBadAuth(res);
+  }
+  logger.log('/setdisablecard', [req.id, 'userid: ' + u.getUserId()]);
+  let status = req.body.disable_card;
+
+  u.setCardDisabled(status);
+  //@todo call the bolt service disable card API call.
+  
+  res.send({disable_card_set: status});
+});
+
+
 module.exports = router;
 
 // ################# HELPERS ###########################
