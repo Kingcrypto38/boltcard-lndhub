@@ -56,6 +56,10 @@ Acceptance tests are in https://github.com/BlueWallet/BlueWallet/blob/master/tes
 
 ![image](https://user-images.githubusercontent.com/1913337/52418916-f30beb00-2ae6-11e9-9d63-17189dc1ae8c.png)
 
+### Compile babeljs
+```
+npx babel ./ --out-dir ./build --copy-files --ignore node_modules
+```
 
 
 ## Responsible disclosure

@@ -606,6 +606,7 @@ router.get('/wipecard', async function (req, res) {
   if (!(await u.loadByAuthorization(req.headers.authorization))) {
     return errorBadAuth(res);
   }
+
   logger.log('/wipecard', [req.id, 'userid: ' + u.getUserId()]);
 
   //talk to the boltcard service and wipe a card. get the keys.
@@ -639,6 +640,16 @@ router.get('/getcard', async function (req, res) {
     //rest of the info
   });
 })
+
+router.post('/setdisablecard', async function (req, res) {
+  logger.log('/setdisablecard', [req.id, 'userid: ' + u.getUserId()]);
+  let status = req.body.disable_card;
+
+  u.setCardDisabled(status);
+  //@todo call the bolt service disable card API call.
+  
+  res.send({disable_card_set: status});
+});
 
 module.exports = router;
 
