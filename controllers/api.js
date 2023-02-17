@@ -4,6 +4,7 @@ const config = require('../config');
 let express = require('express');
 let router = express.Router();
 let logger = require('../utils/logger');
+var rp = require('request-promise');
 const MIN_BTC_BLOCK = 670000;
 if (process.env.NODE_ENV !== 'prod') {
   console.log('using config', JSON.stringify(config));
@@ -546,21 +547,55 @@ router.get('/getcardkeys', async function (req, res) {
 
   //talk to the boltcard service and create a new card. get the keys.
 
-  //store the card UID in Redis.
+  //@TODO: pasword comes out as "false"
+  var name = u.getUserId()+':'+u.getPassword();
+  var tx_max = 1000;
+  var day_max = 10000;
+  var enable = 'true';
+  var uid_privacy = 'false';
+  var allow_neg_bal = 'false';
 
-  return res.send({
-    card_name: 'Test_card_keys',
-    id: 1,
-    k0: '11111111111111111111111111111111',
-    k1: '22222222222222222222222222222222',
-    k2: '33333333333333333333333333333333',
-    k3: '44444444444444444444444444444444',
-    k4: '55555555555555555555555555555555',
-    lnurlw_base: 'lnurlw://your.domain.com/ln',
-    protocol_name: 'new_bolt_card_response',
-    protocol_version: 1,
-  });
 
+  var query = `card_name=${name}&tx_max=${tx_max}&day_max=${day_max}&enable=${enable}&uid_privacy=${uid_privacy}&allow_neg_bal=${allow_neg_bal}`;
+
+
+  //@TODO: update http to https
+  //@TODO: need to store these keys on redis because we can't call the create bolt card for the second time
+   
+  //call create bolt card
+  try {
+    var createReqResponse = await rp({uri: `http://${config.boltcardservice.hostname}/createboltcard?${query}`, json: true});
+
+    if(createReqResponse.status == "ERROR") {
+      return res.send({
+        error: true,
+        //@TODO: not sure about error codes
+        code: 1,
+        message: createReqResponse.reason,
+      });
+    }
+    if(createReqResponse.url) {
+      //get the actual keys
+
+      var keys = await rp({uri: createReqResponse.url, json: true});
+      return res.send(keys);
+    }
+    return res.send({
+      error: true,
+      //@TODO: not sure about error codes
+      code: 1,
+      message: 'not able to connect to bolt card service',
+    });
+
+
+  } catch (error) {
+    return res.send({
+      error: true,
+      //@TODO: not sure about error codes
+      code: 1,
+      message: error.message,
+    });
+  }
 
 });
 

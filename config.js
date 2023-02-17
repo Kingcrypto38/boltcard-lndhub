@@ -18,6 +18,9 @@ let config = {
     url: '1.1.1.1:10009',
     password: '',
   },
+  boltcardservice: {
+    hostname: 'boltcardservice.com'
+  }
 };
 
 if (process.env.CONFIG) {
