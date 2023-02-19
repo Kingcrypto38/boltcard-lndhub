@@ -536,7 +536,7 @@ router.get('/getchaninfo/:chanid', async function (req, res) {
   res.send('');
 });
 
-router.get('/getcardkeys', async function (req, res) {
+router.post('/getcardkeys', async function (req, res) {
   logger.log('/getcardkeys', [req.id]);
   
   let u = new User(redis, bitcoinclient, lightning);
@@ -547,8 +547,7 @@ router.get('/getcardkeys', async function (req, res) {
 
   //talk to the boltcard service and create a new card. get the keys.
 
-  //@TODO: pasword comes out as "false"
-  var name = u.getUserId()+':'+u.getPassword();
+  let card_name = req.body.card_name;
   var tx_max = 1000;
   var day_max = 10000;
   var enable = 'true';
@@ -556,7 +555,7 @@ router.get('/getcardkeys', async function (req, res) {
   var allow_neg_bal = 'false';
 
 
-  var query = `card_name=${name}&tx_max=${tx_max}&day_max=${day_max}&enable=${enable}&uid_privacy=${uid_privacy}&allow_neg_bal=${allow_neg_bal}`;
+  var query = `card_name=${card_name}&tx_max=${tx_max}&day_max=${day_max}&enable=${enable}&uid_privacy=${uid_privacy}&allow_neg_bal=${allow_neg_bal}`;
 
 
   //@TODO: update http to https
@@ -599,7 +598,7 @@ router.get('/getcardkeys', async function (req, res) {
 
 });
 
-router.get('/wipecard', async function (req, res) {
+router.post('/wipecard', async function (req, res) {
   logger.log('/wipecard', [req.id]);
   
   let u = new User(redis, bitcoinclient, lightning);
@@ -607,21 +606,34 @@ router.get('/wipecard', async function (req, res) {
     return errorBadAuth(res);
   }
 
-  logger.log('/wipecard', [req.id, 'userid: ' + u.getUserId()]);
+  let card_name = req.body.card_name;
+  logger.log('/wipecard', [req.id, 'userid: ' + u.getUserId(), ';card_name'+card_name]);
+
+  var query = `card_name=${card_name}`;
 
   //talk to the boltcard service and wipe a card. get the keys.
-  //find the card using UID in Redis.
+  try {
+    var wipeReqResponse = await rp({uri: `http://${config.boltcardservice.hostname}/wipeboltcard?${query}`, json: true});
 
-  return res.send({
-    "action": "wipe",
-    "id": 1,
-    "k0": "11111111111111111111111111111111",
-    "k1": "22222222222222222222222222222222",
-    "k2": "33333333333333333333333333333333",
-    "k3": "44444444444444444444444444444444",
-    "k4": "55555555555555555555555555555555",
-    "version": 1
-  });
+    if(wipeReqResponse.status == "ERROR") {
+      return res.send({
+        error: true,
+        //@TODO: not sure about error codes
+        code: 1,
+        message: wipeReqResponse.reason,
+      });
+    }
+    return res.send(wipeReqResponse);
+
+  } catch (error) {
+    return res.send({
+      error: true,
+      //@TODO: not sure about error codes
+      code: 1,
+      message: error.message,
+    });
+  }
+
 })
 
 router.get('/getcard', async function (req, res) {
