@@ -556,11 +556,13 @@ router.post('/getcardkeys', async function (req, res) {
 
 
   var query = `card_name=${card_name}&tx_max=${tx_max}&day_max=${day_max}&enable=${enable}&uid_privacy=${uid_privacy}&allow_neg_bal=${allow_neg_bal}`;
+  logger.log('/getcardkeys', `${config.boltcardservice.hostname}/createboltcard?${query}`);
 
   //call create bolt card
   try {
-    var createReqResponse = await rp({uri: `https://${config.boltcardservice.hostname}/createboltcard?${query}`, json: true});
+    var createReqResponse = await rp({uri: `${config.boltcardservice.hostname}/createboltcard?${query}`, json: true});
 
+    logger.log('/getcardkeys CREATE RESPONSE', [createReqResponse]);
     if(createReqResponse.status == "ERROR") {
       return res.send({
         error: true,
@@ -570,8 +572,11 @@ router.post('/getcardkeys', async function (req, res) {
     }
     if(createReqResponse.url) {
       //get the actual keys
+      logger.log('/getcardkeys NEW GET', createReqResponse.url);
+
 
       var keys = await rp({uri: createReqResponse.url, json: true});
+      logger.log('/getcardkeys NEW GET RESPONSE', [keys]);
       return res.send(keys);
     }
     return res.send({
@@ -582,6 +587,8 @@ router.post('/getcardkeys', async function (req, res) {
 
 
   } catch (error) {
+    logger.log('/getcardkeys ERROR RESPONSE', error.message);
+
     return res.send({
       error: true,
       code: 6,
@@ -606,7 +613,7 @@ router.post('/wipecard', async function (req, res) {
 
   //talk to the boltcard service and wipe a card. get the keys.
   try {
-    var wipeReqResponse = await rp({uri: `http://${config.boltcardservice.hostname}/wipeboltcard?${query}`, json: true});
+    var wipeReqResponse = await rp({uri: `${config.boltcardservice.hostname}/wipeboltcard?${query}`, json: true});
 
     if(wipeReqResponse.status == "ERROR") {
       return res.send({
