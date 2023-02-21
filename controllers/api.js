@@ -613,7 +613,7 @@ router.post('/wipecard', async function (req, res) {
 
   //talk to the boltcard service and wipe a card. get the keys.
   try {
-    var wipeReqResponse = await rp({uri: `${config.boltcardservice.hostname}/wipeboltcard?${query}`, json: true});
+    var wipeReqResponse = await rp({uri: `${config.boltcardservice.url}/wipeboltcard?${query}`, json: true});
 
     if(wipeReqResponse.status == "ERROR") {
       return res.send({
