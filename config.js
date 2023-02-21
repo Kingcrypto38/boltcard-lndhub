@@ -19,7 +19,7 @@ let config = {
     password: '',
   },
   boltcardservice: {
-    hostname: 'boltcardservice.com'
+    url: 'https://boltcardservice.com'
   }
 };
 

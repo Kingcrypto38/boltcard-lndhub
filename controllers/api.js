@@ -556,11 +556,11 @@ router.post('/getcardkeys', async function (req, res) {
 
 
   var query = `card_name=${card_name}&tx_max=${tx_max}&day_max=${day_max}&enable=${enable}&uid_privacy=${uid_privacy}&allow_neg_bal=${allow_neg_bal}`;
-  logger.log('/getcardkeys', `${config.boltcardservice.hostname}/createboltcard?${query}`);
+  logger.log('/getcardkeys', `${config.boltcardservice.url}/createboltcard?${query}`);
 
   //call create bolt card
   try {
-    var createReqResponse = await rp({uri: `${config.boltcardservice.hostname}/createboltcard?${query}`, json: true});
+    var createReqResponse = await rp({uri: `${config.boltcardservice.url}/createboltcard?${query}`, json: true});
 
     logger.log('/getcardkeys CREATE RESPONSE', [createReqResponse]);
     if(createReqResponse.status == "ERROR") {
