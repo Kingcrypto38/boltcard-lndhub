@@ -205,7 +205,7 @@ router.post('/addinvoice', postLimiter, async function (req, res) {
   );
 });
 
-router.post('/payinvoice', async function (req, res) {
+router.post('/payinvoice', postLimiter, async function (req, res) {
   let u = new User(redis, bitcoinclient, lightning);
   if (!(await u.loadByAuthorization(req.headers.authorization))) {
     return errorBadAuth(res);
@@ -416,7 +416,7 @@ router.get('/getinfo', postLimiter, async function (req, res) {
   });
 });
 
-router.get('/gettxs', async function (req, res) {
+router.get('/gettxs', postLimiter, async function (req, res) {
   logger.log('/gettxs', [req.id]);
   let u = new User(redis, bitcoinclient, lightning);
   if (!(await u.loadByAuthorization(req.headers.authorization))) {
@@ -462,7 +462,7 @@ router.get('/getuserinvoices', postLimiter, async function (req, res) {
   }
 });
 
-router.get('/getpending', async function (req, res) {
+router.get('/getpending', postLimiter, async function (req, res) {
   logger.log('/getpending', [req.id]);
   let u = new User(redis, bitcoinclient, lightning);
   if (!(await u.loadByAuthorization(req.headers.authorization))) {
@@ -476,7 +476,7 @@ router.get('/getpending', async function (req, res) {
   res.send(txs);
 });
 
-router.get('/decodeinvoice', async function (req, res) {
+router.get('/decodeinvoice', postLimiter, async function (req, res) {
   logger.log('/decodeinvoice', [req.id]);
   let u = new User(redis, bitcoinclient, lightning);
   if (!(await u.loadByAuthorization(req.headers.authorization))) {
