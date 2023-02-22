@@ -573,9 +573,15 @@ router.post('/getcardkeys', async function (req, res) {
     if(createReqResponse.url) {
       //get the actual keys
       logger.log('/getcardkeys NEW GET', createReqResponse.url);
+      let cardUrl = new URL(createReqResponse.url);
+      // var newCardUrl = new URL(cardUrl);
+      let newCardUrl = cardUrl;
+      if(config.boltcardservice.service_url) {
+        newCardUrl = config.boltcardservice.service_url+cardUrl.pathname+cardUrl.search;
+        logger.log('/getcardkeys NEW GET URL for docker', newCardUrl);
+      }
 
-
-      var keys = await rp({uri: createReqResponse.url, json: true});
+      var keys = await rp({uri: newCardUrl, json: true});
       logger.log('/getcardkeys NEW GET RESPONSE', [keys]);
       return res.send(keys);
     }
