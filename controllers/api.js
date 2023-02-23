@@ -698,9 +698,10 @@ router.post('/updatecard', async function (req, res) {
   let tx_max = req.body.tx_max;
   let enable = req.body.enable;
   let card_name = req.body.card_name;
+  let day_max = req.body.day_max;
   logger.log('/updatecard', [req.body]);
 
-  var query = `card_name=${card_name}&enable=${enable}&tx_max=${tx_max}`;
+  var query = `card_name=${card_name}&enable=${enable}&tx_max=${tx_max}&day_max=${day_max}`;
 
   //talk to the boltcard service and update the card
   try {
