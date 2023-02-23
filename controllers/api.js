@@ -634,21 +634,39 @@ router.post('/wipecard', async function (req, res) {
 
 })
 
-router.get('/getcard', async function (req, res) {
+router.post('/getcard', async function (req, res) {
   logger.log('/getcard', [req.id]);
   
   let u = new User(redis, bitcoinclient, lightning);
   if (!(await u.loadByAuthorization(req.headers.authorization))) {
     return errorBadAuth(res);
   }
-  logger.log('/getcard', [req.id, 'userid: ' + u.getUserId()]);
 
-  //find the card using UID in Redis.
+  let card_name = req.body.card_name;
+  logger.log('/getcard', [req.id, 'userid: ' + u.getUserId(), ';card_name'+card_name]);
 
-  return res.send({
-    "card_name": "Test_card",
-    //rest of the info
-  });
+  var query = `card_name=${card_name}`;
+
+  //talk to the boltcard service and find the card
+  try {
+    var response = await rp({uri: `${config.boltcardservice.url}/getboltcard?${query}`, json: true});
+
+    if(response.status == "ERROR") {
+      return res.send({
+        error: true,
+        code: 6,
+        message: response.reason,
+      });
+    }
+    return res.send(response);
+
+  } catch (error) {
+    return res.send({
+      error: true,
+      code: 6,
+      message: error.message,
+    });
+  }
 })
 
 router.post('/setdisablecard', async function (req, res) {
@@ -659,6 +677,46 @@ router.post('/setdisablecard', async function (req, res) {
   //@todo call the bolt service disable card API call.
   
   res.send({disable_card_set: status});
+});
+
+router.post('/updatecard', async function (req, res) {
+  logger.log('/updatecard', [req.id]);
+  // u.setCardDisabled(status);
+  
+  let u = new User(redis, bitcoinclient, lightning);
+  if (!(await u.loadByAuthorization(req.headers.authorization))) {
+    return errorBadAuth(res);
+  }
+  logger.log('/updatecard', [req.id, 'userid: ' + u.getUserId()]);
+
+  let tx_max = req.body.tx_max;
+  let enable = req.body.enable;
+  let card_name = req.body.card_name;
+  logger.log('/updatecard', [req.body]);
+
+  var query = `card_name=${card_name}&enable=${enable}&tx_max=${tx_max}`;
+
+  //talk to the boltcard service and update the card
+  try {
+    var response = await rp({uri: `${config.boltcardservice.url}/updateboltcard?${query}`, json: true});
+
+    if(response.status == "ERROR") {
+      return res.send({
+        error: true,
+        code: 6,
+        message: response.reason,
+      });
+    }
+    return res.send(response);
+
+  } catch (error) {
+    return res.send({
+      error: true,
+      code: 6,
+      message: error.message,
+    });
+  }
+  
 });
 
 module.exports = router;
