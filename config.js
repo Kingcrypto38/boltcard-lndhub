@@ -19,7 +19,8 @@ let config = {
     password: '',
   },
   boltcardservice: {
-    url: 'https://boltcardservice.com'
+    url: 'https://boltcardservice.com:9001',
+    service_url: 'https://boltcardservice.com:9000'
   }
 };
 
