@@ -338,11 +338,13 @@ router.post('/payinvoice', postLimiter, async function (req, res) {
         //something like this????
         const LightningInvoiceSettledNotification = {
           payment_request: req.body.invoice,
-          amt: info.num_satoshis, // amt is used only for 'tip' invoices
-          fee_limit: { fixed: Math.floor(info.num_satoshis * forwardFee) + 1 },
-          userid: u.getUserId()
+          amt_paid_sat: info.num_satoshis, // amt is used only for 'tip' invoices
+          userid: u.getUserId(),
+          memo: info.description
         };
+        logger.log('/payinvoice', 'payment made by ', u.getUserId(), ', posting to GroundControl...');
         console.log('payment made by ', u.getUserId(), ', posting to GroundControl...');
+        
         const baseURI = process.env.GROUNDCONTROL;
         if (!baseURI) return;
         const _api = new Frisbee({ baseURI: baseURI });
