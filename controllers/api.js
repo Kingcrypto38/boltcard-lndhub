@@ -314,7 +314,40 @@ router.post('/payinvoice', postLimiter, async function (req, res) {
           await u.savePaidLndInvoice(payment);
           await u.clearBalanceCache();
           lock.releaseLock();
+
+          //send notification through ground control
+          const LightningInvoiceSettledNotification = {
+            payment_request: req.body.invoice,
+            amt_paid_sat: info.num_satoshis, // amt is used only for 'tip' invoices
+            userid: u.getLogin(),
+            memo: info.description
+          };
+          logger.log('/payinvoice', 'payment made by ', u.getLogin(), ', posting to GroundControl...');
+          console.log('payment made by ', u.getLogin(), ', posting to GroundControl...');
+          console.log(LightningInvoiceSettledNotification, ', posting to GroundControl...');
+
+          const baseURI = process.env.GROUNDCONTROL;
+          if (baseURI) {
+            const _api = new Frisbee({ baseURI: baseURI });
+            const apiResponse = await _api.post(
+              '/userPaidLightningInvoice',
+              Object.assign(
+                {},
+                {
+                  headers: {
+                    'Access-Control-Allow-Origin': '*',
+                    'Content-Type': 'application/json',
+                  },
+                  body: LightningInvoiceSettledNotification,
+                },
+              ),
+            );
+            console.log('GroundControl:', apiResponse.originalResponse.status);
+          }
+
           res.send(payment);
+
+
         } else {
           // payment failed
           lock.releaseLock();
@@ -334,36 +367,6 @@ router.post('/payinvoice', postLimiter, async function (req, res) {
       try {
         await u.lockFunds(req.body.invoice, info);
         call.write(inv);
-
-        //something like this????
-        const LightningInvoiceSettledNotification = {
-          payment_request: req.body.invoice,
-          amt_paid_sat: info.num_satoshis, // amt is used only for 'tip' invoices
-          userid: u.getLogin(),
-          memo: info.description
-        };
-        logger.log('/payinvoice', 'payment made by ', u.getLogin(), ', posting to GroundControl...');
-        console.log('payment made by ', u.getLogin(), ', posting to GroundControl...');
-        console.log(LightningInvoiceSettledNotification, ', posting to GroundControl...');
-
-        const baseURI = process.env.GROUNDCONTROL;
-        if (!baseURI) return;
-        const _api = new Frisbee({ baseURI: baseURI });
-        const apiResponse = await _api.post(
-          '/userPaidLightningInvoice',
-          Object.assign(
-            {},
-            {
-              headers: {
-                'Access-Control-Allow-Origin': '*',
-                'Content-Type': 'application/json',
-              },
-              body: LightningInvoiceSettledNotification,
-            },
-          ),
-        );
-        console.log('GroundControl:', apiResponse.originalResponse.status);
-
 
       } catch (Err) {
         await lock.releaseLock();
