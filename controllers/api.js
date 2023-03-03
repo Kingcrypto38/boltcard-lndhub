@@ -342,9 +342,10 @@ router.post('/payinvoice', postLimiter, async function (req, res) {
           userid: u.getLogin(),
           memo: info.description
         };
-        logger.log('/payinvoice', 'payment made by ', u.getUserId(), ', posting to GroundControl...');
-        console.log('payment made by ', u.getUserId(), ', posting to GroundControl...');
-        
+        logger.log('/payinvoice', 'payment made by ', u.getLogin(), ', posting to GroundControl...');
+        console.log('payment made by ', u.getLogin(), ', posting to GroundControl...');
+        console.log(LightningInvoiceSettledNotification, ', posting to GroundControl...');
+
         const baseURI = process.env.GROUNDCONTROL;
         if (!baseURI) return;
         const _api = new Frisbee({ baseURI: baseURI });
