@@ -319,7 +319,7 @@ router.post('/payinvoice', postLimiter, async function (req, res) {
           //send notification through ground control
           const LightningInvoiceSettledNotification = {
             payment_request: req.body.invoice,
-            amt_paid_sat: info.num_satoshis, // amt is used only for 'tip' invoices
+            amt_paid_sat: +info.num_satoshis + Math.floor(info.num_satoshis * forwardFee), // amt is used only for 'tip' invoices
             userid: u.getLogin(),
             memo: info.description
           };
