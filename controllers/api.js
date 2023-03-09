@@ -316,34 +316,37 @@ router.post('/payinvoice', postLimiter, async function (req, res) {
           lock.releaseLock();
 
           logger.log('/payinvoice sendPayment callback', payment);
-          //send notification through ground control
-          const LightningInvoiceSettledNotification = {
-            payment_request: req.body.invoice,
-            amt_paid_sat: +info.num_satoshis + Math.floor(info.num_satoshis * forwardFee), // amt is used only for 'tip' invoices
-            userid: u.getLogin(),
-            memo: info.description
-          };
-          logger.log('/payinvoice', 'payment made by ', u.getLogin(), ', posting to GroundControl...');
-          console.log('payment made by ', u.getLogin(), ', posting to GroundControl...');
-          console.log(LightningInvoiceSettledNotification, ', posting to GroundControl...');
+          if(req.body.loginid) {
+            //send notification through ground control
+            const LightningInvoiceSettledNotification = {
+              payment_request: req.body.invoice,
+              amt_paid_sat: +info.num_satoshis + Math.floor(info.num_satoshis * forwardFee), // amt is used only for 'tip' invoices
+              userid: req.body.loginid,
+              memo: info.description
+            };
+            logger.log('/payinvoice', 'payment made by ', req.body.loginid, ', posting to GroundControl...');
+            console.log('payment made by ', req.body.loginid, ', posting to GroundControl...');
+            console.log(LightningInvoiceSettledNotification, ', posting to GroundControl...');
 
-          const baseURI = process.env.GROUNDCONTROL;
-          if (baseURI) {
-            const _api = new Frisbee({ baseURI: baseURI });
-            const apiResponse = await _api.post(
-              '/userPaidLightningInvoice',
-              Object.assign(
-                {},
-                {
-                  headers: {
-                    'Access-Control-Allow-Origin': '*',
-                    'Content-Type': 'application/json',
+            const baseURI = process.env.GROUNDCONTROL;
+            if (baseURI) {
+              const _api = new Frisbee({ baseURI: baseURI });
+              const apiResponse = await _api.post(
+                '/userPaidLightningInvoice',
+                Object.assign(
+                  {},
+                  {
+                    headers: {
+                      'Access-Control-Allow-Origin': '*',
+                      'Content-Type': 'application/json',
+                    },
+                    body: LightningInvoiceSettledNotification,
                   },
-                  body: LightningInvoiceSettledNotification,
-                },
-              ),
-            );
-            console.log('GroundControl:', apiResponse.originalResponse.status);
+                ),
+              );
+              console.log('GroundControl:', apiResponse.originalResponse.status);
+            }
+            
           }
 
           res.send(payment);
@@ -857,3 +860,15 @@ function errorSunsetAddInvoice(res) {
     message: 'This LNDHub instance is scheduled to shut down. Withdraw any remaining funds',
   });
 }
+
+
+{"payment_error":"",
+"payment_preimage":
+{"type":"Buffer",
+"data":[223,80,235,118,68,219,6,62,9,134,64,136,105,204,12,27,89,185,112,64,10,15,133,71,127,208,60,234,150,199,20,204]},
+"payment_route":{
+  "hops":[{"custom_records":{},"chan_id":"850787804143157249","chan_capacity":"1000000","amt_to_forward":"201","fee":"1","expiry":780083,"amt_to_forward_msat":"201060","fee_msat":"1040","pub_key":"03d2d9b865127074632a6b8f8e67c977e9618b55ba0e7d9c005011549bd6ecc302","tlv_payload":true,"mpp_record":null},
+    {"custom_records":{},"chan_id":"839140677364023297","chan_capacity":"5000000","amt_to_forward":"201","fee":"0","expiry":780043,"amt_to_forward_msat":"201000","fee_msat":"60","pub_key":"035e4ff418fc8b5554c5d9eea66396c227bd429a3251c8cbc711002ba215bfc226","tlv_payload":true,"mpp_record":null},
+    {"custom_records":{},"chan_id":"856948367666970625","chan_capacity":"16777215","amt_to_forward":"200","fee":"1","expiry":780003,"amt_to_forward_msat":"200000","fee_msat":"1000","pub_key":"031015a7839468a3c266d662d5bb21ea4cea24226936e2864a7ca4f2c3939836e0","tlv_payload":true,"mpp_record":null},
+    {"custom_records":{},"chan_id":"17592186044416006758","chan_capacity":"200","amt_to_forward":"200","fee":"0","expiry":780003,"amt_to_forward_msat":"200000","fee_msat":"0","pub_key":"036399b660a6760f449762abd78cdb35ed91a436b4eec4fab0c3c5a177a4466015","tlv_payload":true,"mpp_record":{"total_amt_msat":"200000","payment_addr":{"type":"Buffer","data":[254,170,121,202,248,24,21,119,234,121,242,171,138,73,158,172,161,188,127,210,114,182,33,22,224,191,93,185,75,229,224,24]}}}],
+  "total_time_lock":780123,"total_fees":2,"total_amt":"202","total_fees_msat":"2100","total_amt_msat":"202100"},"payment_hash":{"type":"Buffer","data":[218,61,131,173,96,82,178,106,139,20,18,191,155,29,116,61,222,186,209,89,94,179,2,169,37,228,158,221,18,111,151,234]},"pay_req":"lnbc2u1pjqj5d8pp5mg7c8ttq22ex4zc5z2lek8t58h0t452et6es92f9uj0d6yn0jl4qdr9yp7q5smjd9khxmmwyppxzapq0ssxyun9v4ar5te0wpex7enfd3j476tdv9nk20mpde5k6ctv84pxzapxvdhkcmmj84phy6tdwdhkucqzpgxqrrssrzjqvgptfurj3528snx6e3dtwepafxw5fpzdymw9pj20jj09sunnqmwpapyqqqqqqq6vcqqqqlgqqqqqqgq9qsp5l648njhcrq2h06ne724c5jv74jsmcl7jw2mzz9hqhawmjjl9uqvq9qyyssqz8ww8nr7xxrxcwmwzy927345zqe5cd67hh4jr3xvpc8mm55msqrnup5yxzzzg4a8r2zdefger7a4ezkydwm7c4wy9eyhfa6lhamn9ncq4e2wkm","decoded":{"route_hints":[{"hop_hints":[{"node_id":"031015a7839468a3c266d662d5bb21ea4cea24226936e2864a7ca4f2c3939836e0","chan_id":"17592186044416006758","fee_base_msat":1000,"fee_proportional_millionths":1,"cltv_expiry_delta":40}]}],"features":{"9":{"name":"tlv-onion","is_required":false,"is_known":true},"14":{"name":"payment-addr","is_required":true,"is_known":true},"17":{"name":"multi-path-payments","is_required":false,"is_known":true}},"destination":"036399b660a6760f449762abd78cdb35ed91a436b4eec4fab0c3c5a177a4466015","payment_hash":"da3d83ad6052b26a8b1412bf9b1d743ddebad1595eb302a925e49edd126f97ea","num_satoshis":"200","timestamp":"1678332327","expiry":"3600","description":" |\nCrimson Bat | breez://profile_image?animal=Bat&color=Crimson","description_hash":"","fallback_addr":"","cltv_expiry":"40","payment_addr":{"type":"Buffer","data":[254,170,121,202,248,24,21,119,234,121,242,171,138,73,158,172,161,188,127,210,114,182,33,22,224,191,93,185,75,229,224,24]},"num_msat":"200000"}}
