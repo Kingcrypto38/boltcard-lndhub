@@ -153,7 +153,7 @@ router.post('/create', postLimiter, async function (req, res) {
   let u = new User(redis, bitcoinclient, lightning);
   await u.create();
   await u.saveMetadata({ partnerid: req.body.partnerid, accounttype: req.body.accounttype, created_at: new Date().toISOString() });
-  res.send({ hub_type: 'boltcardhub', login: u.getLogin(), password: u.getPassword() });
+  res.send({ login: u.getLogin(), password: u.getPassword() });
 });
 
 router.post('/auth', postLimiter, async function (req, res) {
@@ -440,6 +440,19 @@ router.get('/balance', postLimiter, async function (req, res) {
 
 router.get('/getinfo', postLimiter, async function (req, res) {
   logger.log('/getinfo', [req.id]);
+  let u = new User(redis, bitcoinclient, lightning);
+  if (!(await u.loadByAuthorization(req.headers.authorization))) {
+    return errorBadAuth(res);
+  }
+
+  lightning.getInfo({}, function (err, info) {
+    if (err) return errorLnd(res);
+    res.send(info);
+  });
+});
+
+router.get('/getinfobolt', postLimiter, async function (req, res) {
+  logger.log('/getinfobolt', [req.id]);
   let u = new User(redis, bitcoinclient, lightning);
   if (!(await u.loadByAuthorization(req.headers.authorization))) {
     return errorBadAuth(res);
