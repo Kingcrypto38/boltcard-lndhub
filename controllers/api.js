@@ -330,7 +330,7 @@ router.post('/payinvoice', postLimiter, async function (req, res) {
 
             const LightningInvoiceSettledNotification = {
               payment_request: req.body.invoice,
-              amt_paid_sat: totalSats
+              amt_paid_sat: totalSats,
               userid: req.body.loginid,
               memo: info.description
             };
