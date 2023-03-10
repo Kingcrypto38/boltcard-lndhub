@@ -318,9 +318,19 @@ router.post('/payinvoice', postLimiter, async function (req, res) {
           logger.log('/payinvoice sendPayment callback', payment);
           if(req.body.loginid) {
             //send notification through ground control
+
+            let totalSats = +payment.payment_route.total_fees + +payment.payment_route.total_amt;
+            if (payment.payment_route.total_amt_msat && payment.payment_route.total_amt_msat / 1000 !== +payment.payment_route.total_amt) {
+              // okay, we have to account for MSAT
+              totalSats =
+                +payment.payment_route.total_fees +
+                Math.max(parseInt(payment.payment_route.total_amt_msat / 1000), +payment.payment_route.total_amt) +
+                1; // extra sat to cover for msats, as external layer (clients) dont have that resolution
+            }
+
             const LightningInvoiceSettledNotification = {
               payment_request: req.body.invoice,
-              amt_paid_sat: +info.num_satoshis + Math.floor(info.num_satoshis * forwardFee), // amt is used only for 'tip' invoices
+              amt_paid_sat: totalSats
               userid: req.body.loginid,
               memo: info.description
             };
