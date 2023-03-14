@@ -633,19 +633,8 @@ router.post('/createboltcard', async function (req, res) {
       });
     }
     if(createReqResponse.url) {
-      //get the actual keys
-      logger.log('/createboltcard NEW GET', createReqResponse.url);
-      let cardUrl = new URL(createReqResponse.url);
-      // var newCardUrl = new URL(cardUrl);
-      let newCardUrl = cardUrl;
-      if(config.boltcardservice.service_url) {
-        newCardUrl = config.boltcardservice.service_url+cardUrl.pathname+cardUrl.search;
-        logger.log('/createboltcard NEW GET URL for docker', newCardUrl);
-      }
-
-      var keys = await rp({uri: newCardUrl, json: true});
-      logger.log('/createboltcard NEW GET RESPONSE', [keys]);
-      return res.send(keys);
+      //return the url
+      return res.send(createReqResponse.url);
     }
     return res.send({
       error: true,
@@ -702,8 +691,20 @@ router.post('/getcardkeys', async function (req, res) {
       });
     }
     if(createReqResponse.url) {
-      //return the url
-      return res.send(createReqResponse.url);
+      //get the actual keys
+      logger.log('/createboltcard NEW GET', createReqResponse.url);
+      let cardUrl = new URL(createReqResponse.url);
+      // var newCardUrl = new URL(cardUrl);
+      let newCardUrl = cardUrl;
+      if(config.boltcardservice.service_url) {
+        newCardUrl = config.boltcardservice.service_url+cardUrl.pathname+cardUrl.search;
+        logger.log('/createboltcard NEW GET URL for docker', newCardUrl);
+      }
+
+      var keys = await rp({uri: newCardUrl, json: true});
+      logger.log('/createboltcard NEW GET RESPONSE', [keys]);
+      return res.send(keys);
+      
     }
     return res.send({
       error: true,
