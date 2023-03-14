@@ -597,6 +597,76 @@ router.get('/getchaninfo/:chanid', async function (req, res) {
   res.send('');
 });
 
+//creates a boltcard with the wallet login id and the password and return a url
+router.post('/createboltcard', async function (req, res) {
+  logger.log('/createboltcard', [req.id]);
+
+  let u = new User(redis, bitcoinclient, lightning);
+  if (!(await u.loadByAuthorization(req.headers.authorization))) {
+    return errorBadAuth(res);
+  }
+  logger.log('/createboltcard', [req.id, 'userid: ' + u.getUserId()]);
+
+  //talk to the boltcard service and create a new card. get the keys.
+
+  let card_name = req.body.card_name;
+  var tx_max = 1000;
+  var day_max = 10000;
+  var enable = 'true';
+  var uid_privacy = 'false';
+  var allow_neg_bal = 'false';
+
+
+  var query = `card_name=${card_name}&tx_max=${tx_max}&day_max=${day_max}&enable=${enable}&uid_privacy=${uid_privacy}&allow_neg_bal=${allow_neg_bal}`;
+  logger.log('/createboltcard', `${config.boltcardservice.url}/createboltcard?${query}`);
+
+  //call create bolt card
+  try {
+    var createReqResponse = await rp({uri: `${config.boltcardservice.url}/createboltcard?${query}`, json: true});
+
+    logger.log('/createboltcard CREATE RESPONSE', [createReqResponse]);
+    if(createReqResponse.status == "ERROR") {
+      return res.send({
+        error: true,
+        code: 6,
+        message: createReqResponse.reason,
+      });
+    }
+    if(createReqResponse.url) {
+      //get the actual keys
+      logger.log('/createboltcard NEW GET', createReqResponse.url);
+      let cardUrl = new URL(createReqResponse.url);
+      // var newCardUrl = new URL(cardUrl);
+      let newCardUrl = cardUrl;
+      if(config.boltcardservice.service_url) {
+        newCardUrl = config.boltcardservice.service_url+cardUrl.pathname+cardUrl.search;
+        logger.log('/createboltcard NEW GET URL for docker', newCardUrl);
+      }
+
+      var keys = await rp({uri: newCardUrl, json: true});
+      logger.log('/createboltcard NEW GET RESPONSE', [keys]);
+      return res.send(keys);
+    }
+    return res.send({
+      error: true,
+      code: 6,
+      message: 'not able to connect to bolt card service',
+    });
+
+
+  } catch (error) {
+    logger.log('/createboltcard ERROR RESPONSE', error.message);
+
+    return res.send({
+      error: true,
+      code: 6,
+      message: error.message,
+    });
+  }
+
+})
+
+//creates a boltcard with the wallet login id and the password and return keys as json
 router.post('/getcardkeys', async function (req, res) {
   logger.log('/getcardkeys', [req.id]);
   
@@ -632,19 +702,8 @@ router.post('/getcardkeys', async function (req, res) {
       });
     }
     if(createReqResponse.url) {
-      //get the actual keys
-      logger.log('/getcardkeys NEW GET', createReqResponse.url);
-      let cardUrl = new URL(createReqResponse.url);
-      // var newCardUrl = new URL(cardUrl);
-      let newCardUrl = cardUrl;
-      if(config.boltcardservice.service_url) {
-        newCardUrl = config.boltcardservice.service_url+cardUrl.pathname+cardUrl.search;
-        logger.log('/getcardkeys NEW GET URL for docker', newCardUrl);
-      }
-
-      var keys = await rp({uri: newCardUrl, json: true});
-      logger.log('/getcardkeys NEW GET RESPONSE', [keys]);
-      return res.send(keys);
+      //return the url
+      return res.send(createReqResponse.url);
     }
     return res.send({
       error: true,
