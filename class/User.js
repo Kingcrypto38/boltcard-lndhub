@@ -167,6 +167,16 @@ export class User {
         calculatedBalance += +invo.amt;
       }
     }
+    
+    let txs = await this.getTxs();
+    for (let tx of txs) {
+      if (tx.type === 'bitcoind_tx') {
+        // topup
+        calculatedBalance += new BigNumber(tx.amount).multipliedBy(100000000).toNumber();
+      } else {
+        calculatedBalance -= +tx.value;
+      }
+    }
 
     let lockedPayments = await this.getLockedPayments();
     for (let paym of lockedPayments) {
@@ -327,16 +337,6 @@ export class User {
    * @returns {Promise<Array>}
    */
   async getTxs() {
-    const addr = await this.getOrGenerateAddress();
-    let txs = await this._listtransactions();
-    txs = txs.result;
-    let result = [];
-    for (let tx of txs) {
-      if (tx.confirmations >= 3 && tx.address === addr && tx.category === 'receive') {
-        tx.type = 'bitcoind_tx';
-        result.push(tx);
-      }
-    }
 
     let range = await this._redis.lrange('txs_for_' + this._userid, 0, -1);
     for (let invoice of range) {
