@@ -168,16 +168,6 @@ export class User {
       }
     }
 
-    let txs = await this.getTxs();
-    for (let tx of txs) {
-      if (tx.type === 'bitcoind_tx') {
-        // topup
-        calculatedBalance += new BigNumber(tx.amount).multipliedBy(100000000).toNumber();
-      } else {
-        calculatedBalance -= +tx.value;
-      }
-    }
-
     let lockedPayments = await this.getLockedPayments();
     for (let paym of lockedPayments) {
       // locked payments are processed in scripts/process-locked-payments.js

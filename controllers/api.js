@@ -440,8 +440,6 @@ router.get('/balance', postLimiter, async function (req, res) {
     }
     logger.log('/balance', [req.id, 'userid: ' + u.getUserId()]);
 
-    if (!(await u.getAddress())) await u.generateAddress(); // onchain address needed further
-    await u.accountForPosibleTxids();
     let balance = await u.getBalance();
     if (balance < 0) balance = 0;
     res.send({ BTC: { AvailableBalance: balance } });
