@@ -167,7 +167,7 @@ export class User {
         calculatedBalance += +invo.amt;
       }
     }
-    
+
     let txs = await this.getTxs();
     for (let tx of txs) {
       if (tx.type === 'bitcoind_tx') {
@@ -337,7 +337,7 @@ export class User {
    * @returns {Promise<Array>}
    */
   async getTxs() {
-
+    let result = [];
     let range = await this._redis.lrange('txs_for_' + this._userid, 0, -1);
     for (let invoice of range) {
       invoice = JSON.parse(invoice);
