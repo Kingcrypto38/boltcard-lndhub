@@ -5,6 +5,7 @@ const mustache = require('mustache');
 const lightning = require('../lightning');
 const logger = require('../utils/logger');
 const qr = require('qr-image');
+const config = require('../config');
 
 let lightningGetInfo = {};
 let lightningListChannels = {};
@@ -106,7 +107,8 @@ router.get('/qr', function (req, res) {
     host = process.env.TOR_URL;
   }
   const customPath = req.url.replace('/qr', '');
-  const url = 'bluewallet:setlndhuburl?url=' + encodeURIComponent(req.protocol + '://' + host + customPath);
+  const gcurl = process.env.GROUNDCONTROL ? 'gcurl=' + process.env.GROUNDCONTROL + '&' : '';
+  const url = 'bluewallet:setlndhuburl?' + gcurl + 'url=' + encodeURIComponent(req.protocol + '://' + host + customPath);
   var code = qr.image(url, { type: 'png' });
   res.setHeader('Content-type', 'image/png');
   code.pipe(res);
