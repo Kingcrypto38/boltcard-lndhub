@@ -107,7 +107,7 @@ router.get('/qr', function (req, res) {
     host = process.env.TOR_URL;
   }
   const customPath = req.url.replace('/qr', '');
-  const gcurl = process.env.GROUNDCONTROL ? 'gcurl=' + process.env.GROUNDCONTROL + '&' : '';
+  const gcurl = process.env.GROUNDCONTROL ? 'gc=' + process.env.GROUNDCONTROL + '&' : '';
   const url = 'bluewallet:setlndhuburl?' + gcurl + 'url=' + encodeURIComponent(req.protocol + '://' + host + customPath);
   var code = qr.image(url, { type: 'png' });
   res.setHeader('Content-type', 'image/png');
