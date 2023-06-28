@@ -845,6 +845,72 @@ router.post('/updatecard', async function (req, res) {
   
 });
 
+router.post('/togglePin', async function (req, res) {
+  logger.log('/togglePin', [req.id]);
+
+  let u = new User(redis, bitcoinclient, lightning);
+  if (!(await u.loadByAuthorization(req.headers.authorization))) {
+    return errorBadAuth(res);
+  }
+
+  let enable_pin = req.body.enable_pin;
+  var query = `enable_pin=${enable_pin}`;
+
+  try {
+    var response = await rp({uri: `${config.boltcardservice.url}/updateboltcard?${query}`, json: true});
+
+    if(response.status == "ERROR") {
+      return res.send({
+        error: true,
+        code: 6,
+        message: response.reason,
+      });
+    }
+    return res.send(response);
+
+  } catch (error) {
+    return res.send({
+      error: true,
+      code: 6,
+      message: error.message,
+    });
+  }
+
+});
+
+router.post('/updatePin', async function (req, res) {
+  logger.log('/updatePin', [req.id]);
+
+  let u = new User(redis, bitcoinclient, lightning);
+  if (!(await u.loadByAuthorization(req.headers.authorization))) {
+    return errorBadAuth(res);
+  }
+
+  let pin_number = req.body.pin_number;
+  var query = `pin_number=${pin_number}`;
+
+  try {
+    var response = await rp({uri: `${config.boltcardservice.url}/updateboltcard?${query}`, json: true});
+
+    if(response.status == "ERROR") {
+      return res.send({
+        error: true,
+        code: 6,
+        message: response.reason,
+      });
+    }
+    return res.send(response);
+
+  } catch (error) {
+    return res.send({
+      error: true,
+      code: 6,
+      message: error.message,
+    });
+  }
+
+});
+
 module.exports = router;
 
 // ################# HELPERS ###########################
