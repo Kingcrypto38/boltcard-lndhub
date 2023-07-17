@@ -824,9 +824,10 @@ router.post('/updatecard', async function (req, res) {
   let day_max = req.body.day_max;
   let enable_pin = req.body.enable_pin;
   let pin_limit_sats = req.body.pin_limit_sats;
+  let pin_number_query = req.body.card_pin_number ? '&pin_number='+req.body.card_pin_number : '';
   logger.log('/updatecard', [req.body]);
 
-  var query = `card_name=${card_name}&enable=${enable}&tx_max=${tx_max}&day_max=${day_max}&enable_pin=${enable_pin}&pin_limit_sats=${pin_limit_sats}`;
+  var query = `card_name=${card_name}&enable=${enable}&tx_max=${tx_max}&day_max=${day_max}&enable_pin=${enable_pin}&pin_limit_sats=${pin_limit_sats}${pin_number_query}`;
 
   //talk to the boltcard service and update the card
   try {
