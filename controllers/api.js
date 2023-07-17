@@ -614,9 +614,10 @@ router.post('/createboltcard', async function (req, res) {
   var uid_privacy = 'false';
   var allow_neg_bal = 'false';
   var enable_pin = 'false';
+  var pin_limit_sats = 1000;
 
 
-  var query = `card_name=${card_name}&tx_max=${tx_max}&day_max=${day_max}&enable=${enable}&uid_privacy=${uid_privacy}&allow_neg_bal=${allow_neg_bal}&enable_pin=${enable_pin}`;
+  var query = `card_name=${card_name}&tx_max=${tx_max}&day_max=${day_max}&enable=${enable}&uid_privacy=${uid_privacy}&allow_neg_bal=${allow_neg_bal}&enable_pin=${enable_pin}&pin_limit_sats=${pin_limit_sats}`;
   logger.log('/createboltcard', `${config.boltcardservice.url}/createboltcard?${query}`);
 
   //call create bolt card
@@ -673,9 +674,10 @@ router.post('/getcardkeys', async function (req, res) {
   var uid_privacy = 'false';
   var allow_neg_bal = 'false';
   var enable_pin = 'false';
+  var pin_limit_sats = 1000;
 
 
-  var query = `card_name=${card_name}&tx_max=${tx_max}&day_max=${day_max}&enable=${enable}&uid_privacy=${uid_privacy}&allow_neg_bal=${allow_neg_bal}&enable_pin=${enable_pin}`;
+  var query = `card_name=${card_name}&tx_max=${tx_max}&day_max=${day_max}&enable=${enable}&uid_privacy=${uid_privacy}&allow_neg_bal=${allow_neg_bal}&enable_pin=${enable_pin}&pin_limit_sats=${pin_limit_sats}`;
   logger.log('/getcardkeys', `${config.boltcardservice.url}/createboltcard?${query}`);
 
   //call create bolt card
@@ -821,9 +823,10 @@ router.post('/updatecard', async function (req, res) {
   let card_name = req.body.card_name;
   let day_max = req.body.day_max;
   let enable_pin = req.body.enable_pin;
+  let pin_limit_sats = req.body.pin_limit_sats;
   logger.log('/updatecard', [req.body]);
 
-  var query = `card_name=${card_name}&enable=${enable}&tx_max=${tx_max}&day_max=${day_max}&enable_pin=${enable_pin}`;
+  var query = `card_name=${card_name}&enable=${enable}&tx_max=${tx_max}&day_max=${day_max}&enable_pin=${enable_pin}&pin_limit_sats=${pin_limit_sats}`;
 
   //talk to the boltcard service and update the card
   try {
