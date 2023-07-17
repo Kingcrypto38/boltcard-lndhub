@@ -613,9 +613,10 @@ router.post('/createboltcard', async function (req, res) {
   var enable = 'true';
   var uid_privacy = 'false';
   var allow_neg_bal = 'false';
+  var enable_pin = 'false';
 
 
-  var query = `card_name=${card_name}&tx_max=${tx_max}&day_max=${day_max}&enable=${enable}&uid_privacy=${uid_privacy}&allow_neg_bal=${allow_neg_bal}`;
+  var query = `card_name=${card_name}&tx_max=${tx_max}&day_max=${day_max}&enable=${enable}&uid_privacy=${uid_privacy}&allow_neg_bal=${allow_neg_bal}&enable_pin=${enable_pin}`;
   logger.log('/createboltcard', `${config.boltcardservice.url}/createboltcard?${query}`);
 
   //call create bolt card
