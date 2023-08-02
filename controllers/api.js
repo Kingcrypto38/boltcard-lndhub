@@ -822,9 +822,9 @@ router.post('/updatecard', async function (req, res) {
   let enable = req.body.enable;
   let card_name = req.body.card_name;
   let day_max = req.body.day_max;
-  let enable_pin = req.body.enable_pin;
-  let pin_limit_sats = req.body.pin_limit_sats;
-  let pin_number_query = req.body.card_pin_number ? '&pin_number='+req.body.card_pin_number : '';
+  let enable_pin = 'false';
+  let pin_limit_sats = 1000;
+  let pin_number_query = '';
   logger.log('/updatecard', [req.body]);
 
   var query = `card_name=${card_name}&enable=${enable}&tx_max=${tx_max}&day_max=${day_max}&enable_pin=${enable_pin}&pin_limit_sats=${pin_limit_sats}${pin_number_query}`;
@@ -852,17 +852,28 @@ router.post('/updatecard', async function (req, res) {
   
 });
 
-router.post('/togglePin', async function (req, res) {
-  logger.log('/togglePin', [req.id]);
-
+router.post('/updatecardwithpin', async function (req, res) {
+  logger.log('/updatecardwithpin', [req.id]);
+  // u.setCardDisabled(status);
+  
   let u = new User(redis, bitcoinclient, lightning);
   if (!(await u.loadByAuthorization(req.headers.authorization))) {
     return errorBadAuth(res);
   }
+  logger.log('/updatecardwithpin', [req.id, 'userid: ' + u.getUserId()]);
 
+  let tx_max = req.body.tx_max;
+  let enable = req.body.enable;
+  let card_name = req.body.card_name;
+  let day_max = req.body.day_max;
   let enable_pin = req.body.enable_pin;
-  var query = `enable_pin=${enable_pin}`;
+  let pin_limit_sats = req.body.pin_limit_sats;
+  let pin_number_query = req.body.card_pin_number ? '&pin_number='+req.body.card_pin_number : '';
+  logger.log('/updatecardwithpin', [req.body]);
 
+  var query = `card_name=${card_name}&enable=${enable}&tx_max=${tx_max}&day_max=${day_max}&enable_pin=${enable_pin}&pin_limit_sats=${pin_limit_sats}${pin_number_query}`;
+
+  //talk to the boltcard service and update the card
   try {
     var response = await rp({uri: `${config.boltcardservice.url}/updateboltcard?${query}`, json: true});
 
@@ -882,40 +893,7 @@ router.post('/togglePin', async function (req, res) {
       message: error.message,
     });
   }
-
-});
-
-router.post('/updatePin', async function (req, res) {
-  logger.log('/updatePin', [req.id]);
-
-  let u = new User(redis, bitcoinclient, lightning);
-  if (!(await u.loadByAuthorization(req.headers.authorization))) {
-    return errorBadAuth(res);
-  }
-
-  let pin_number = req.body.pin_number;
-  var query = `pin_number=${pin_number}`;
-
-  try {
-    var response = await rp({uri: `${config.boltcardservice.url}/updateboltcard?${query}`, json: true});
-
-    if(response.status == "ERROR") {
-      return res.send({
-        error: true,
-        code: 6,
-        message: response.reason,
-      });
-    }
-    return res.send(response);
-
-  } catch (error) {
-    return res.send({
-      error: true,
-      code: 6,
-      message: error.message,
-    });
-  }
-
+  
 });
 
 module.exports = router;
