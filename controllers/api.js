@@ -613,11 +613,9 @@ router.post('/createboltcard', async function (req, res) {
   var enable = 'true';
   var uid_privacy = 'false';
   var allow_neg_bal = 'false';
-  var enable_pin = 'false';
-  var pin_limit_sats = 1000;
 
 
-  var query = `card_name=${card_name}&tx_max=${tx_max}&day_max=${day_max}&enable=${enable}&uid_privacy=${uid_privacy}&allow_neg_bal=${allow_neg_bal}&enable_pin=${enable_pin}&pin_limit_sats=${pin_limit_sats}`;
+  var query = `card_name=${card_name}&tx_max=${tx_max}&day_max=${day_max}&enable=${enable}&uid_privacy=${uid_privacy}&allow_neg_bal=${allow_neg_bal}`;
   logger.log('/createboltcard', `${config.boltcardservice.url}/createboltcard?${query}`);
 
   //call create bolt card
@@ -645,6 +643,66 @@ router.post('/createboltcard', async function (req, res) {
 
   } catch (error) {
     logger.log('/createboltcard ERROR RESPONSE', error.message);
+
+    return res.send({
+      error: true,
+      code: 6,
+      message: error.message,
+    });
+  }
+
+})
+
+//creates a boltcard with the wallet login id and the password and return a url
+router.post('/createboltcardwithpin', async function (req, res) {
+  logger.log('/createboltcardwithpin', [req.id]);
+
+  let u = new User(redis, bitcoinclient, lightning);
+  if (!(await u.loadByAuthorization(req.headers.authorization))) {
+    return errorBadAuth(res);
+  }
+  logger.log('/createboltcardwithpin', [req.id, 'userid: ' + u.getUserId()]);
+
+  //talk to the boltcard service and create a new card. get the keys.
+
+  let card_name = req.body.card_name;
+  var tx_max = 1000;
+  var day_max = 10000;
+  var enable = 'true';
+  var uid_privacy = 'false';
+  var allow_neg_bal = 'false';
+  var enable_pin = 'false';
+  var pin_limit_sats = 1000;
+
+
+  var query = `card_name=${card_name}&tx_max=${tx_max}&day_max=${day_max}&enable=${enable}&uid_privacy=${uid_privacy}&allow_neg_bal=${allow_neg_bal}&enable_pin=${enable_pin}&pin_limit_sats=${pin_limit_sats}`;
+  logger.log('/createboltcardwithpin', `${config.boltcardservice.url}/createboltcardwithpin?${query}`);
+
+  //call create bolt card
+  try {
+    var createReqResponse = await rp({uri: `${config.boltcardservice.url}/createboltcardwithpin?${query}`, json: true});
+
+    logger.log('/createboltcardwithpin CREATE RESPONSE', [createReqResponse]);
+    if(createReqResponse.status == "ERROR") {
+      return res.send({
+        error: true,
+        code: 6,
+        message: createReqResponse.reason,
+      });
+    }
+    if(createReqResponse.url) {
+      //return the url
+      return res.send(createReqResponse.url);
+    }
+    return res.send({
+      error: true,
+      code: 6,
+      message: 'not able to connect to bolt card service',
+    });
+
+
+  } catch (error) {
+    logger.log('/createboltcardwithpin ERROR RESPONSE', error.message);
 
     return res.send({
       error: true,
