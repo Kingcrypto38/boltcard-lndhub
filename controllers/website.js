@@ -6,6 +6,7 @@ const lightning = require('../lightning');
 const logger = require('../utils/logger');
 const qr = require('qr-image');
 const config = require('../config');
+var pjson = require('../package.json');
 
 let lightningGetInfo = {};
 let lightningListChannels = {};
@@ -98,7 +99,7 @@ router.get('/', function (req, res) {
   }
   res.setHeader('Content-Type', 'text/html');
   let html = fs.readFileSync('./templates/index.html').toString('utf8');
-  return res.status(200).send(mustache.render(html, Object.assign({}, lightningGetInfo, lightningListChannels)));
+  return res.status(200).send(mustache.render(html, Object.assign({"version_number": pjson.version}, lightningGetInfo, lightningListChannels)));
 });
 
 router.get('/qr', function (req, res) {
