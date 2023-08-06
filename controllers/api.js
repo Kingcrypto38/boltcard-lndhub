@@ -653,6 +653,66 @@ router.post('/createboltcard', async function (req, res) {
 
 })
 
+//creates a boltcard with the wallet login id and the password and return a url
+router.post('/createboltcardwithpin', async function (req, res) {
+  logger.log('/createboltcardwithpin', [req.id]);
+
+  let u = new User(redis, bitcoinclient, lightning);
+  if (!(await u.loadByAuthorization(req.headers.authorization))) {
+    return errorBadAuth(res);
+  }
+  logger.log('/createboltcardwithpin', [req.id, 'userid: ' + u.getUserId()]);
+
+  //talk to the boltcard service and create a new card. get the keys.
+
+  let card_name = req.body.card_name;
+  var tx_max = 1000;
+  var day_max = 10000;
+  var enable = 'true';
+  var uid_privacy = 'false';
+  var allow_neg_bal = 'false';
+  var enable_pin = 'false';
+  var pin_limit_sats = 1000;
+
+
+  var query = `card_name=${card_name}&tx_max=${tx_max}&day_max=${day_max}&enable=${enable}&uid_privacy=${uid_privacy}&allow_neg_bal=${allow_neg_bal}&enable_pin=${enable_pin}&pin_limit_sats=${pin_limit_sats}`;
+  logger.log('/createboltcardwithpin', `${config.boltcardservice.url}/createboltcardwithpin?${query}`);
+
+  //call create bolt card
+  try {
+    var createReqResponse = await rp({uri: `${config.boltcardservice.url}/createboltcardwithpin?${query}`, json: true});
+
+    logger.log('/createboltcardwithpin CREATE RESPONSE', [createReqResponse]);
+    if(createReqResponse.status == "ERROR") {
+      return res.send({
+        error: true,
+        code: 6,
+        message: createReqResponse.reason,
+      });
+    }
+    if(createReqResponse.url) {
+      //return the url
+      return res.send(createReqResponse.url);
+    }
+    return res.send({
+      error: true,
+      code: 6,
+      message: 'not able to connect to bolt card service',
+    });
+
+
+  } catch (error) {
+    logger.log('/createboltcardwithpin ERROR RESPONSE', error.message);
+
+    return res.send({
+      error: true,
+      code: 6,
+      message: error.message,
+    });
+  }
+
+})
+
 //creates a boltcard with the wallet login id and the password and return keys as json
 router.post('/getcardkeys', async function (req, res) {
   logger.log('/getcardkeys', [req.id]);
@@ -671,9 +731,11 @@ router.post('/getcardkeys', async function (req, res) {
   var enable = 'true';
   var uid_privacy = 'false';
   var allow_neg_bal = 'false';
+  var enable_pin = 'false';
+  var pin_limit_sats = 1000;
 
 
-  var query = `card_name=${card_name}&tx_max=${tx_max}&day_max=${day_max}&enable=${enable}&uid_privacy=${uid_privacy}&allow_neg_bal=${allow_neg_bal}`;
+  var query = `card_name=${card_name}&tx_max=${tx_max}&day_max=${day_max}&enable=${enable}&uid_privacy=${uid_privacy}&allow_neg_bal=${allow_neg_bal}&enable_pin=${enable_pin}&pin_limit_sats=${pin_limit_sats}`;
   logger.log('/getcardkeys', `${config.boltcardservice.url}/createboltcard?${query}`);
 
   //call create bolt card
@@ -825,6 +887,50 @@ router.post('/updatecard', async function (req, res) {
   //talk to the boltcard service and update the card
   try {
     var response = await rp({uri: `${config.boltcardservice.url}/updateboltcard?${query}`, json: true});
+
+    if(response.status == "ERROR") {
+      return res.send({
+        error: true,
+        code: 6,
+        message: response.reason,
+      });
+    }
+    return res.send(response);
+
+  } catch (error) {
+    return res.send({
+      error: true,
+      code: 6,
+      message: error.message,
+    });
+  }
+  
+});
+
+router.post('/updatecardwithpin', async function (req, res) {
+  logger.log('/updatecardwithpin', [req.id]);
+  // u.setCardDisabled(status);
+  
+  let u = new User(redis, bitcoinclient, lightning);
+  if (!(await u.loadByAuthorization(req.headers.authorization))) {
+    return errorBadAuth(res);
+  }
+  logger.log('/updatecardwithpin', [req.id, 'userid: ' + u.getUserId()]);
+
+  let tx_max = req.body.tx_max;
+  let enable = req.body.enable;
+  let card_name = req.body.card_name;
+  let day_max = req.body.day_max;
+  let enable_pin = req.body.enable_pin;
+  let pin_limit_sats = req.body.pin_limit_sats;
+  let pin_number_query = req.body.card_pin_number ? '&pin_number='+req.body.card_pin_number : '';
+  logger.log('/updatecardwithpin', [req.body]);
+
+  var query = `card_name=${card_name}&enable=${enable}&tx_max=${tx_max}&day_max=${day_max}&enable_pin=${enable_pin}&pin_limit_sats=${pin_limit_sats}${pin_number_query}`;
+
+  //talk to the boltcard service and update the card
+  try {
+    var response = await rp({uri: `${config.boltcardservice.url}/updateboltcardwithpin?${query}`, json: true});
 
     if(response.status == "ERROR") {
       return res.send({
