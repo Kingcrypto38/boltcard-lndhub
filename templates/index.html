@@ -47,8 +47,25 @@
                 </defs>
                 <div id="LNDHub" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
                     <img style="float:left; margin-right:20px;" width="80" src="../static/img/bolt-card-icon.png"/>
+                    {{^title}}
                     <h1>BOLT CARD HUB</h1>
+                    {{/title}}
+                    {{#title}}
+                    <h1>{{title}}</h1>
+                    {{/title}}
                     <small>(forked from bluewallet)</small>
+                </div>
+                <div style="margin-top: 20px; display: flex; flex-wrap: wrap;">
+                    {{#android_app_link}}
+                    <a href="{{android_app_link}}" target="_new" style="margin-right: 15px;">
+                        <img src="https://i.imgur.com/pwG7EuU.png" style="width: 200px;" alt="Google Playstore" />
+                    </a>
+                    {{/android_app_link}}
+                    {{#ios_app_link}}
+                    <a href="{{ios_app_link}}" target="_new">
+                        <img src="https://i.imgur.com/nVfagxH.png" style="width: 200px;" alt="Appstore" />
+                    </a>
+                    {{/ios_app_link}}
                 </div>
             </svg>
         </div>
@@ -121,9 +138,24 @@
         {{/uris}}
     </div>
     <footer>
+        <div style="margin-top: 10px; display: flex; flex-direction: column;">
+                    {{#android_app_link}}
+            <a href="{{android_app_link}}" target="_new" style="margin-bottom: 7px;">
+                <img src="https://i.imgur.com/pwG7EuU.png" style="width: 200px; max-width: 100%;" alt="Google Playstore" />
+            </a>
+            {{/android_app_link}}
+            {{#ios_app_link}}
+            <a href="{{ios_app_link}}" target="_new">
+                <img src="https://i.imgur.com/nVfagxH.png" style="width: 200px; max-width: 100%;" alt="Appstore" />
+            </a>
+            {{/ios_app_link}}
+        </div>
         <p>Version: v{{version_number}}</p>
         <a href="https://github.com/boltcard" target="_blank">about</a> | 
-        <a href="https://t.me/bolt_card" target="_blank">community</a>
+        <a href="https://t.me/bolt_card" target="_blank">community</a> 
+        {{#settings_link}}
+        | <a href="{{settings_link}}">settings</a>
+        {{/settings_link}}
 </div>
 
 </body>

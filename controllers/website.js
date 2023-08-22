@@ -99,7 +99,11 @@ router.get('/', function (req, res) {
   }
   res.setHeader('Content-Type', 'text/html');
   let html = fs.readFileSync('./templates/index.html').toString('utf8');
-  return res.status(200).send(mustache.render(html, Object.assign({"version_number": pjson.version}, lightningGetInfo, lightningListChannels)));
+  let umbrelInfo = {};
+  if(process.env.UMBREL) {
+    umbrelInfo = { "title": "Bolt Card Wallet Hub", "android_app_link": "https://play.google.com/store/apps/details?id=com.boltcard.boltcard", "ios_app_link": "https://apps.apple.com/us/app/bolt-card-wallet/id6446301845"};
+  }
+  return res.status(200).send(mustache.render(html, Object.assign({"version_number": pjson.version, "settings_link": process.env.SETTINGS_RELATIVE_PATH}, lightningGetInfo, lightningListChannels, umbrelInfo)));
 });
 
 router.get('/qr', function (req, res) {
