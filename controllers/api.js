@@ -205,7 +205,7 @@ router.post('/addinvoice', postLimiter, async function (req, res) {
   );
 });
 
-router.post('/payinvoice', async function (req, res) {
+router.post('/payinvoice', postLimiter, async function (req, res) {
   let u = new User(redis, bitcoinclient, lightning);
   if (!(await u.loadByAuthorization(req.headers.authorization))) {
     return errorBadAuth(res);
@@ -314,10 +314,59 @@ router.post('/payinvoice', async function (req, res) {
           await u.savePaidLndInvoice(payment);
           await u.clearBalanceCache();
           lock.releaseLock();
+
+          logger.log('/payinvoice sendPayment callback', payment);
+          if(req.body.loginid) {
+            //send notification through ground control
+
+            let totalSats = +payment.payment_route.total_fees + +payment.payment_route.total_amt;
+            if (payment.payment_route.total_amt_msat && payment.payment_route.total_amt_msat / 1000 !== +payment.payment_route.total_amt) {
+              // okay, we have to account for MSAT
+              totalSats =
+                +payment.payment_route.total_fees +
+                Math.max(parseInt(payment.payment_route.total_amt_msat / 1000), +payment.payment_route.total_amt) +
+                1; // extra sat to cover for msats, as external layer (clients) dont have that resolution
+            }
+
+            const LightningInvoiceSettledNotification = {
+              payment_request: req.body.invoice,
+              amt_paid_sat: totalSats,
+              userid: req.body.loginid,
+              memo: info.description
+            };
+            logger.log('/payinvoice', 'payment made by ', req.body.loginid, ', posting to GroundControl...');
+            console.log('payment made by ', req.body.loginid, ', posting to GroundControl...');
+            console.log(LightningInvoiceSettledNotification, ', posting to GroundControl...');
+
+            const baseURI = process.env.GROUNDCONTROL;
+            if (baseURI) {
+              const _api = new Frisbee({ baseURI: baseURI });
+              const apiResponse = await _api.post(
+                '/userPaidLightningInvoice',
+                Object.assign(
+                  {},
+                  {
+                    headers: {
+                      'Access-Control-Allow-Origin': '*',
+                      'Content-Type': 'application/json',
+                    },
+                    body: LightningInvoiceSettledNotification,
+                  },
+                ),
+              );
+              console.log('GroundControl:', apiResponse.originalResponse.status);
+            }
+            
+          }
+
           res.send(payment);
+
+
         } else {
           // payment failed
           lock.releaseLock();
+          logger.log('/payinvoice errorPaymentFailed payment', payment);
+
           return errorPaymentFailed(res);
         }
       });
@@ -331,11 +380,15 @@ router.post('/payinvoice', async function (req, res) {
         amt: info.num_satoshis, // amt is used only for 'tip' invoices
         fee_limit: { fixed: Math.floor(info.num_satoshis * forwardFee) + 1 },
       };
+      logger.log('/payinvoice inv', inv);
+      logger.log('/payinvoice', ['userBalance: ', userBalance, ', info.num_satoshis: ', info.num_satoshis, ', forwardFee: ', forwardFee]);
       try {
         await u.lockFunds(req.body.invoice, info);
         call.write(inv);
+
       } catch (Err) {
         await lock.releaseLock();
+        logger.log('/payinvoice errorPaymentFailed', Err.message);
         return errorPaymentFailed(res);
       }
     } else {
@@ -392,13 +445,11 @@ router.get('/balance', postLimiter, async function (req, res) {
     }
     logger.log('/balance', [req.id, 'userid: ' + u.getUserId()]);
 
-    if (!(await u.getAddress())) await u.generateAddress(); // onchain address needed further
-    await u.accountForPosibleTxids();
     let balance = await u.getBalance();
     if (balance < 0) balance = 0;
     res.send({ BTC: { AvailableBalance: balance } });
   } catch (Error) {
-    logger.log('', [req.id, 'error getting balance:', Error, 'userid:', u.getUserId()]);
+    logger.log('', [req.id, 'error getting balance:', Error.message, 'userid:', u.getUserId()]);
     return errorGeneralServerError(res);
   }
 });
@@ -416,7 +467,20 @@ router.get('/getinfo', postLimiter, async function (req, res) {
   });
 });
 
-router.get('/gettxs', async function (req, res) {
+router.get('/getinfobolt', postLimiter, async function (req, res) {
+  logger.log('/getinfobolt', [req.id]);
+  let u = new User(redis, bitcoinclient, lightning);
+  if (!(await u.loadByAuthorization(req.headers.authorization))) {
+    return errorBadAuth(res);
+  }
+
+  lightning.getInfo({}, function (err, info) {
+    if (err) return errorLnd(res);
+    res.send(info);
+  });
+});
+
+router.get('/gettxs', postLimiter, async function (req, res) {
   logger.log('/gettxs', [req.id]);
   let u = new User(redis, bitcoinclient, lightning);
   if (!(await u.loadByAuthorization(req.headers.authorization))) {
@@ -462,7 +526,7 @@ router.get('/getuserinvoices', postLimiter, async function (req, res) {
   }
 });
 
-router.get('/getpending', async function (req, res) {
+router.get('/getpending', postLimiter, async function (req, res) {
   logger.log('/getpending', [req.id]);
   let u = new User(redis, bitcoinclient, lightning);
   if (!(await u.loadByAuthorization(req.headers.authorization))) {
@@ -476,7 +540,7 @@ router.get('/getpending', async function (req, res) {
   res.send(txs);
 });
 
-router.get('/decodeinvoice', async function (req, res) {
+router.get('/decodeinvoice', postLimiter, async function (req, res) {
   logger.log('/decodeinvoice', [req.id]);
   let u = new User(redis, bitcoinclient, lightning);
   if (!(await u.loadByAuthorization(req.headers.authorization))) {
@@ -536,6 +600,125 @@ router.get('/getchaninfo/:chanid', async function (req, res) {
   res.send('');
 });
 
+//creates a boltcard with the wallet login id and the password and return a url
+router.post('/createboltcard', async function (req, res) {
+  logger.log('/createboltcard', [req.id]);
+
+  let u = new User(redis, bitcoinclient, lightning);
+  if (!(await u.loadByAuthorization(req.headers.authorization))) {
+    return errorBadAuth(res);
+  }
+  logger.log('/createboltcard', [req.id, 'userid: ' + u.getUserId()]);
+
+  //talk to the boltcard service and create a new card. get the keys.
+
+  let card_name = req.body.card_name;
+  var tx_max = 1000;
+  var day_max = 10000;
+  var enable = 'true';
+  var uid_privacy = 'false';
+  var allow_neg_bal = 'false';
+
+
+  var query = `card_name=${card_name}&tx_max=${tx_max}&day_max=${day_max}&enable=${enable}&uid_privacy=${uid_privacy}&allow_neg_bal=${allow_neg_bal}`;
+  logger.log('/createboltcard', `${config.boltcardservice.url}/createboltcard?${query}`);
+
+  //call create bolt card
+  try {
+    var createReqResponse = await rp({uri: `${config.boltcardservice.url}/createboltcard?${query}`, json: true});
+
+    logger.log('/createboltcard CREATE RESPONSE', [createReqResponse]);
+    if(createReqResponse.status == "ERROR") {
+      return res.send({
+        error: true,
+        code: 6,
+        message: createReqResponse.reason,
+      });
+    }
+    if(createReqResponse.url) {
+      //return the url
+      return res.send(createReqResponse.url);
+    }
+    return res.send({
+      error: true,
+      code: 6,
+      message: 'not able to connect to bolt card service',
+    });
+
+
+  } catch (error) {
+    logger.log('/createboltcard ERROR RESPONSE', error.message);
+
+    return res.send({
+      error: true,
+      code: 6,
+      message: error.message,
+    });
+  }
+
+})
+
+//creates a boltcard with the wallet login id and the password and return a url
+router.post('/createboltcardwithpin', async function (req, res) {
+  logger.log('/createboltcardwithpin', [req.id]);
+
+  let u = new User(redis, bitcoinclient, lightning);
+  if (!(await u.loadByAuthorization(req.headers.authorization))) {
+    return errorBadAuth(res);
+  }
+  logger.log('/createboltcardwithpin', [req.id, 'userid: ' + u.getUserId()]);
+
+  //talk to the boltcard service and create a new card. get the keys.
+
+  let card_name = req.body.card_name;
+  var tx_max = 1000;
+  var day_max = 10000;
+  var enable = 'true';
+  var uid_privacy = 'false';
+  var allow_neg_bal = 'false';
+  var enable_pin = 'false';
+  var pin_limit_sats = 1000;
+
+
+  var query = `card_name=${card_name}&tx_max=${tx_max}&day_max=${day_max}&enable=${enable}&uid_privacy=${uid_privacy}&allow_neg_bal=${allow_neg_bal}&enable_pin=${enable_pin}&pin_limit_sats=${pin_limit_sats}`;
+  logger.log('/createboltcardwithpin', `${config.boltcardservice.url}/createboltcardwithpin?${query}`);
+
+  //call create bolt card
+  try {
+    var createReqResponse = await rp({uri: `${config.boltcardservice.url}/createboltcardwithpin?${query}`, json: true});
+
+    logger.log('/createboltcardwithpin CREATE RESPONSE', [createReqResponse]);
+    if(createReqResponse.status == "ERROR") {
+      return res.send({
+        error: true,
+        code: 6,
+        message: createReqResponse.reason,
+      });
+    }
+    if(createReqResponse.url) {
+      //return the url
+      return res.send(createReqResponse.url);
+    }
+    return res.send({
+      error: true,
+      code: 6,
+      message: 'not able to connect to bolt card service',
+    });
+
+
+  } catch (error) {
+    logger.log('/createboltcardwithpin ERROR RESPONSE', error.message);
+
+    return res.send({
+      error: true,
+      code: 6,
+      message: error.message,
+    });
+  }
+
+})
+
+//creates a boltcard with the wallet login id and the password and return keys as json
 router.post('/getcardkeys', async function (req, res) {
   logger.log('/getcardkeys', [req.id]);
   
@@ -553,9 +736,11 @@ router.post('/getcardkeys', async function (req, res) {
   var enable = 'true';
   var uid_privacy = 'false';
   var allow_neg_bal = 'false';
+  var enable_pin = 'false';
+  var pin_limit_sats = 1000;
 
 
-  var query = `card_name=${card_name}&tx_max=${tx_max}&day_max=${day_max}&enable=${enable}&uid_privacy=${uid_privacy}&allow_neg_bal=${allow_neg_bal}`;
+  var query = `card_name=${card_name}&tx_max=${tx_max}&day_max=${day_max}&enable=${enable}&uid_privacy=${uid_privacy}&allow_neg_bal=${allow_neg_bal}&enable_pin=${enable_pin}&pin_limit_sats=${pin_limit_sats}`;
   logger.log('/getcardkeys', `${config.boltcardservice.url}/createboltcard?${query}`);
 
   //call create bolt card
@@ -572,18 +757,19 @@ router.post('/getcardkeys', async function (req, res) {
     }
     if(createReqResponse.url) {
       //get the actual keys
-      logger.log('/getcardkeys NEW GET', createReqResponse.url);
+      logger.log('/createboltcard NEW GET', createReqResponse.url);
       let cardUrl = new URL(createReqResponse.url);
       // var newCardUrl = new URL(cardUrl);
       let newCardUrl = cardUrl;
       if(config.boltcardservice.service_url) {
         newCardUrl = config.boltcardservice.service_url+cardUrl.pathname+cardUrl.search;
-        logger.log('/getcardkeys NEW GET URL for docker', newCardUrl);
+        logger.log('/createboltcard NEW GET URL for docker', newCardUrl);
       }
 
       var keys = await rp({uri: newCardUrl, json: true});
-      logger.log('/getcardkeys NEW GET RESPONSE', [keys]);
+      logger.log('/createboltcard NEW GET RESPONSE', [keys]);
       return res.send(keys);
+      
     }
     return res.send({
       error: true,
@@ -640,21 +826,39 @@ router.post('/wipecard', async function (req, res) {
 
 })
 
-router.get('/getcard', async function (req, res) {
+router.post('/getcard', async function (req, res) {
   logger.log('/getcard', [req.id]);
   
   let u = new User(redis, bitcoinclient, lightning);
   if (!(await u.loadByAuthorization(req.headers.authorization))) {
     return errorBadAuth(res);
   }
-  logger.log('/getcard', [req.id, 'userid: ' + u.getUserId()]);
 
-  //find the card using UID in Redis.
+  let card_name = req.body.card_name;
+  logger.log('/getcard', [req.id, 'userid: ' + u.getUserId(), ';card_name'+card_name]);
 
-  return res.send({
-    "card_name": "Test_card",
-    //rest of the info
-  });
+  var query = `card_name=${card_name}`;
+
+  //talk to the boltcard service and find the card
+  try {
+    var response = await rp({uri: `${config.boltcardservice.url}/getboltcard?${query}`, json: true});
+
+    if(response.status == "ERROR") {
+      return res.send({
+        error: true,
+        code: 6,
+        message: response.reason,
+      });
+    }
+    return res.send(response);
+
+  } catch (error) {
+    return res.send({
+      error: true,
+      code: 6,
+      message: error.message,
+    });
+  }
 })
 
 router.post('/setdisablecard', async function (req, res) {
@@ -665,6 +869,91 @@ router.post('/setdisablecard', async function (req, res) {
   //@todo call the bolt service disable card API call.
   
   res.send({disable_card_set: status});
+});
+
+router.post('/updatecard', async function (req, res) {
+  logger.log('/updatecard', [req.id]);
+  // u.setCardDisabled(status);
+  
+  let u = new User(redis, bitcoinclient, lightning);
+  if (!(await u.loadByAuthorization(req.headers.authorization))) {
+    return errorBadAuth(res);
+  }
+  logger.log('/updatecard', [req.id, 'userid: ' + u.getUserId()]);
+
+  let tx_max = req.body.tx_max;
+  let enable = req.body.enable;
+  let card_name = req.body.card_name;
+  let day_max = req.body.day_max;
+  logger.log('/updatecard', [req.body]);
+
+  var query = `card_name=${card_name}&enable=${enable}&tx_max=${tx_max}&day_max=${day_max}`;
+
+  //talk to the boltcard service and update the card
+  try {
+    var response = await rp({uri: `${config.boltcardservice.url}/updateboltcard?${query}`, json: true});
+
+    if(response.status == "ERROR") {
+      return res.send({
+        error: true,
+        code: 6,
+        message: response.reason,
+      });
+    }
+    return res.send(response);
+
+  } catch (error) {
+    return res.send({
+      error: true,
+      code: 6,
+      message: error.message,
+    });
+  }
+  
+});
+
+router.post('/updatecardwithpin', async function (req, res) {
+  logger.log('/updatecardwithpin', [req.id]);
+  // u.setCardDisabled(status);
+  
+  let u = new User(redis, bitcoinclient, lightning);
+  if (!(await u.loadByAuthorization(req.headers.authorization))) {
+    return errorBadAuth(res);
+  }
+  logger.log('/updatecardwithpin', [req.id, 'userid: ' + u.getUserId()]);
+
+  let tx_max = req.body.tx_max;
+  let enable = req.body.enable;
+  let card_name = req.body.card_name;
+  let day_max = req.body.day_max;
+  let enable_pin = req.body.enable_pin;
+  let pin_limit_sats = req.body.pin_limit_sats;
+  let pin_number_query = req.body.card_pin_number ? '&pin_number='+req.body.card_pin_number : '';
+  logger.log('/updatecardwithpin', [req.body]);
+
+  var query = `card_name=${card_name}&enable=${enable}&tx_max=${tx_max}&day_max=${day_max}&enable_pin=${enable_pin}&pin_limit_sats=${pin_limit_sats}${pin_number_query}`;
+
+  //talk to the boltcard service and update the card
+  try {
+    var response = await rp({uri: `${config.boltcardservice.url}/updateboltcardwithpin?${query}`, json: true});
+
+    if(response.status == "ERROR") {
+      return res.send({
+        error: true,
+        code: 6,
+        message: response.reason,
+      });
+    }
+    return res.send(response);
+
+  } catch (error) {
+    return res.send({
+      error: true,
+      code: 6,
+      message: error.message,
+    });
+  }
+  
 });
 
 module.exports = router;
