@@ -215,9 +215,7 @@ footer a {
 	}
 }
 @media (max-width: 1199px){
-	.logo {
-		width: 200px;
-	}
+
 	.scroll {
 		overflow: scroll;
 		padding: 0px 16px 0px 1px;
@@ -244,9 +242,6 @@ footer a {
 	}
 }
 @media (max-width: 959px){
-	.logo {
-		width: 200px;
-	}
 
 }
 
